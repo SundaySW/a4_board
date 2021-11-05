@@ -11,8 +11,8 @@ using inIOS = IOS<INPUT_TYPE, PinReadable>;
 using InList = std::list<inIOS>;
 InList inputsList;
 IOS gridCenter = inIOS(GRID_CENTER, GRID_END_POINT_GPIO_Port, GRID_END_POINT_Pin);
-IOS grid120Detect = inIOS(GRID_CENTER, GRID_120_DETECT_GPIO_Port, GRID_120_DETECT_Pin);
-IOS grid180Detect = inIOS(GRID_CENTER, GRID_180_DETECT_GPIO_Port, GRID_180_DETECT_Pin);
+IOS grid120Detect = inIOS(GRID_120_DETECT, GRID_120_DETECT_GPIO_Port, GRID_120_DETECT_Pin);
+IOS grid180Detect = inIOS(GRID_180_DETECT, GRID_180_DETECT_GPIO_Port, GRID_180_DETECT_Pin);
 IOS onTomo = inIOS (ON_TOMO, ON_TOMO_GPIO_Port, ON_TOMO_Pin);
 IOS buckyCall = inIOS (BUCKY_CALL, BUCKY_CALL_GPIO_Port, BUCKY_CALL_Pin);
 
@@ -25,23 +25,29 @@ IOS grid120 = outIOS(GRID_120, GRID_120_GPIO_Port, GRID_120_Pin);
 IOS grid180 = outIOS(GRID_180, GRID_180_GPIO_Port, GRID_180_Pin);
 IOS buckyReady = outIOS(BUCKY_READY, BUCKY_READY_GPIO_Port, BUCKY_READY_Pin);
 
-const Button<GRID_BUTTON> btn_grid;
-const Button<PUSHBUTTON_BUCKYBRAKE> btn_bucky;
+const Button btn_grid = Button(GRID_BUTTON);
+const Button btn_bucky = Button(PUSHBUTTON_BUCKYBRAKE);
 
-StepperCfg cfg;
-auto motorController = MotorController();
-auto mainController = MainController(inputsList, outputsList, motorController);
+MotorController motorController;
+MainController mainController;
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-    if(htim->Instance == TIM1) mainController.update();
+    if(htim->Instance == TIM1){
+        mainController.update();
+    }
 
-    if(htim->Instance == TIM3) HAL_IWDG_Refresh(&hiwdg);
+    if(htim->Instance == TIM3){
+//        HAL_IWDG_Refresh(&hiwdg);
+    }
 }
 
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 {
-    if(htim->Instance == TIM4) motorController.motor_refresh();
+    if(htim->Instance == TIM4){
+        motorController.motor_refresh();
+        grid180.toggleData();
+    }
 }
 
 volatile bool btn_buckyBrake_pressed = false;
@@ -59,14 +65,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
             break;
         case GRID_BUTTON_Pin:
             if(btn_grid_pressed){
-                if((HAL_GetTick() - time_gridBTN_pressed) > TIME_GRID_BTN_LONG_PRESS) {
-                    btn_grid_pressed = false;
+                if((HAL_GetTick() - time_gridBTN_pressed) > TIME_GRID_BTN_LONG_PRESS)
                     mainController.btn_event(btn_grid, HIGH);
-                }
-            }else{
-                btn_grid_pressed = true;
-                time_gridBTN_pressed = HAL_GetTick();
-            }
+            }else time_gridBTN_pressed = HAL_GetTick();
+            btn_grid_pressed = !btn_grid_pressed;
             break;
         default:
             break;
@@ -85,7 +87,7 @@ void EXTI_clear_enable(){
 
 void SystemClock_Config();
 
-StepperCfg& DIPSwitches_configureDriver();
+StepperCfg DIPSwitches_configureDriver();
 
 int main()
 {
@@ -94,35 +96,37 @@ int main()
     MX_GPIO_Init();
     MX_FDCAN1_Init();
     MX_TIM1_Init();
-    //MX_TIM2_Init();
-    MX_TIM4_Init();
     MX_TIM3_Init();
-    MX_IWDG_Init();
+
+    MX_TIM4_Init();
+//    MX_IWDG_Init();
 
     inputsList.push_back(gridCenter);
     inputsList.push_back(grid120Detect);
     inputsList.push_back(grid180Detect);
     inputsList.push_back(onTomo);
     inputsList.push_back(buckyCall);
-    outputsList.push_back(buckyBrake),
-    outputsList.push_back(laserCentering),
-    outputsList.push_back(grid120),
-    outputsList.push_back(grid180),
+
+    outputsList.push_back(buckyBrake);
+    outputsList.push_back(laserCentering);
+    outputsList.push_back(grid120);
+    outputsList.push_back(grid180);
     outputsList.push_back(buckyReady);
 
     motorController.load_driver(DIPSwitches_configureDriver());
+    mainController.init(std::move(inputsList), std::move(outputsList), motorController);
 
     HAL_TIM_Base_Start_IT(&htim1);
     HAL_TIM_Base_Start_IT(&htim3);
-
     EXTI_clear_enable();
 
-    mainController.init_procedure();
+//    mainController.init_procedure();
 
     while (true){}
 }
 
-StepperCfg& DIPSwitches_configureDriver(){
+StepperCfg DIPSwitches_configureDriver(){
+    StepperCfg cfg;
     cfg.Vmin = START_SPEED;
     cfg.htim = &htim4;
     if(HAL_GPIO_ReadPin(CONFIG_1_GPIO_Port, CONFIG_1_Pin)){

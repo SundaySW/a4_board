@@ -5,13 +5,10 @@
 #ifndef TOMO_A4BOARD_BUTTON_HPP
 #define TOMO_A4BOARD_BUTTON_HPP
 
-
-template<BTN_TYPE incomeType>
 struct Button{
-    static const BTN_TYPE type = incomeType;
-    static inline constexpr BTN_TYPE getType(){
-        return type;
-    }
+    explicit Button(BTN_TYPE incomeType): type(incomeType){}
+    const BTN_TYPE type;
+    inline constexpr BTN_TYPE getType(){return type;}
 };
 
 #endif //TOMO_A4BOARD_BUTTON_HPP

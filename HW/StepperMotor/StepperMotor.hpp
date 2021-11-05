@@ -42,7 +42,7 @@ public:
 
     MotorController() = default;
 
-    void load_driver(StepperCfg &cfg){
+    void load_driver(StepperCfg &&cfg){
         A = cfg.A;
         Vmin = cfg.Vmin;
         Vmax = cfg.Vmax;
@@ -60,7 +60,6 @@ public:
         }
         if(accelerationMode) reCalcSpeed();
         else currentStep++;
-        //TODO записать в регистры новое значение по посчитанной скорости
         regValueCalc(V);
     }
 
@@ -88,7 +87,6 @@ public:
 
     inline void stopMotor(){
         if(motorMoving){
-            //TODO TIM stop
             HAL_TIM_PWM_Stop_IT(htim, TIM_CHANNEL_2);
             enable.setValue(LOW);
             motorMoving = false;
@@ -147,7 +145,6 @@ private:
             direction_changed = 0;
             motorMoving = true;
             enable.setValue(HIGH);
-            //TODO TIM start
             regValueCalc(V);
             HAL_TIM_PWM_Start_IT(htim, TIM_CHANNEL_2);
         }
