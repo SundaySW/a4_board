@@ -47,8 +47,11 @@ public:
 
     template<typename T = Interface, class = typename std::enable_if_t<std::is_base_of<PinReadable, T>::value>>
     inline LOGIC_LEVEL getValue(){
-        if ((port->IDR & pin) != (uint32_t)LOGIC_LEVEL::LOW) return LOGIC_LEVEL::HIGH;
-        else return LOGIC_LEVEL::LOW;
+        LOGIC_LEVEL retVal;
+        if ((port->IDR & pin) != (uint32_t)LOGIC_LEVEL::LOW) retVal = LOGIC_LEVEL::HIGH;
+        else retVal = LOGIC_LEVEL::LOW;
+        if(inverted) return (retVal ? LOGIC_LEVEL::LOW : LOGIC_LEVEL::HIGH);
+        else return retVal;
     }
 
     template<typename T = Interface, class = typename std::enable_if_t<std::is_base_of<PinReadable, T>::value>>
@@ -74,7 +77,11 @@ public:
     const IOS& operator=(const IOS &) = delete;
     IOS& operator=(IOS &) = delete;
 
-    constexpr IOS(DataType incomeData, GPIO_TypeDef* incomePortPtr, uint16_t incomePin):
+    void setInverted() {
+        inverted = true;
+    }
+
+    constexpr explicit IOS(DataType incomeData, GPIO_TypeDef* incomePortPtr, uint16_t incomePin):
         dataType(incomeData),
         port(incomePortPtr),
         pin(incomePin)
@@ -83,6 +90,7 @@ protected:
 private:
     GPIO_TypeDef* port;
     uint16_t pin;
+    bool inverted = false;
 };
 
 #endif //TOMO_A4BOARD_IOS_HPP

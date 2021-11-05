@@ -104,7 +104,9 @@ int main()
     inputsList.push_back(gridCenter);
     inputsList.push_back(grid120Detect);
     inputsList.push_back(grid180Detect);
+    onTomo.setInverted();         ///Сигнал инвертирован
     inputsList.push_back(onTomo);
+    buckyCall.setInverted();     ///Сигнал инвертирован
     inputsList.push_back(buckyCall);
 
     outputsList.push_back(buckyBrake);
@@ -120,7 +122,7 @@ int main()
     HAL_TIM_Base_Start_IT(&htim3);
     EXTI_clear_enable();
 
-//    mainController.init_procedure();
+    mainController.init_procedure();
 
     while (true){}
 }
@@ -212,7 +214,11 @@ void SystemClock_Config()
 void Error_Handler(void)
 {
     __disable_irq();
-    while (1){}
+    while (1){
+        for(int i = 0; i < 40000000; i++){}
+        grid180.toggleData();
+        grid120.toggleData();
+    }
 }
 
 #ifdef  USE_FULL_ASSERT

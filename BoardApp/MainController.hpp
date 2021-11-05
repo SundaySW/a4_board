@@ -47,16 +47,14 @@ public:
        motorController = &incomeMotorController;
    }
 
-
-    //TODO call таймере
     void update(){
         for(inData &data: inputDataList) data.refresh();
 
         if(motorController->getMode() == MotorController::in_ERROR)
             currentError = LIMIT_SWITCH_ERROR;
 
-//        else if(*buckyCall || currentStatus == DEVICE_SCANING_TOMO_OFF || currentStatus == DEVICE_SCANING_TOMO_ON)
-//            exposition_procedure();
+        else if(*buckyCall || currentStatus == DEVICE_SCANING_TOMO_OFF || currentStatus == DEVICE_SCANING_TOMO_ON)
+            exposition_procedure();
 
         if(*gridCenter && !*buckyCall){
             motorController->stopMotor();
@@ -68,13 +66,8 @@ public:
                 if(data.dataType == GRID_120) data.toggleData();
             }
         }
-//        if(motorController->isMotorMoving()){
-//            for(outData &data : outputDataList){
-//                if(data.dataType == GRID_180) data.toggleData();
-//            }
-//        }
         ////////
-        //if(currentError != NO_ERROR) errorHandler(currentError);
+        if(currentError != NO_ERROR) errorHandler(currentError);
     }
 
     void btn_event(Button btn, LOGIC_LEVEL value){
