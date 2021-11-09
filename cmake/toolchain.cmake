@@ -22,8 +22,8 @@ set(CMAKE_ASM_FLAGS_INIT        "${COMMON_FLAGS} -x assembler-with-cpp"       CA
 set(CMAKE_EXE_LINKER_FLAGS_INIT "-Wl,--gc-sections"                           CACHE STRING "" FORCE)
 
 
-set(CMAKE_C_FLAGS_DEBUG     "-Os -g"          CACHE STRING "" FORCE)
-set(CMAKE_CXX_FLAGS_DEBUG   "-Os -g"          CACHE STRING "" FORCE)
+set(CMAKE_C_FLAGS_DEBUG     "-O0 -g"          CACHE STRING "" FORCE)
+set(CMAKE_CXX_FLAGS_DEBUG   "-O0 -g"          CACHE STRING "" FORCE)
 set(CMAKE_C_FLAGS_RELEASE   "-Os -DNDEBUG" CACHE STRING "" FORCE)
 set(CMAKE_CXX_FLAGS_RELEASE "-Os -DNDEBUG" CACHE STRING "" FORCE)
 

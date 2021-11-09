@@ -39,11 +39,11 @@ struct PinWriteable
 {
 };
 
-template<typename DataType, typename Interface>
+template<typename DataLabel, typename Interface>
 class IOS{
 public:
     LOGIC_LEVEL currentState = LOW;
-    const DataType dataType;
+    const DataLabel dataType;
 
     template<typename T = Interface, class = typename std::enable_if_t<std::is_base_of<PinReadable, T>::value>>
     inline LOGIC_LEVEL getValue(){
@@ -81,7 +81,7 @@ public:
         inverted = true;
     }
 
-    constexpr explicit IOS(DataType incomeData, GPIO_TypeDef* incomePortPtr, uint16_t incomePin):
+    constexpr explicit IOS(DataLabel incomeData, GPIO_TypeDef* incomePortPtr, uint16_t incomePin):
         dataType(incomeData),
         port(incomePortPtr),
         pin(incomePin)

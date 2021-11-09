@@ -46,7 +46,6 @@ void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 {
     if(htim->Instance == TIM4){
         motorController.motor_refresh();
-        grid180.toggleData();
     }
 }
 
@@ -96,11 +95,12 @@ int main()
     MX_GPIO_Init();
     MX_FDCAN1_Init();
     MX_TIM1_Init();
-    MX_TIM3_Init();
-
     MX_TIM4_Init();
+
+//    MX_TIM3_Init();
 //    MX_IWDG_Init();
 
+    gridCenter.setInverted();
     inputsList.push_back(gridCenter);
     inputsList.push_back(grid120Detect);
     inputsList.push_back(grid180Detect);
@@ -118,10 +118,12 @@ int main()
     motorController.load_driver(DIPSwitches_configureDriver());
     mainController.init(std::move(inputsList), std::move(outputsList), motorController);
 
-    HAL_TIM_Base_Start_IT(&htim1);
-    HAL_TIM_Base_Start_IT(&htim3);
     EXTI_clear_enable();
 
+    HAL_TIM_Base_Start_IT(&htim1);
+//    HAL_TIM_Base_Start_IT(&htim3);
+
+    HAL_Delay(300);
     mainController.init_procedure();
 
     while (true){}

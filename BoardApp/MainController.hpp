@@ -56,16 +56,17 @@ public:
         else if(*buckyCall || currentStatus == DEVICE_SCANING_TOMO_OFF || currentStatus == DEVICE_SCANING_TOMO_ON)
             exposition_procedure();
 
-        if(*gridCenter && !*buckyCall){
+        if(*gridCenter && !*buckyCall && !motorController->noReturn){
             motorController->stopMotor();
             currentStatus = DEVICE_STANDBY;
         }
         ////////
-        if(currentStatus == DEVICE_STANDBY){
-            for(outData &data : outputDataList){
-                if(data.dataType == GRID_120) data.toggleData();
-            }
-        }
+//        if(currentStatus == DEVICE_STANDBY)
+//            for(outData &data : outputDataList) if(data.dataType == GRID_120) data.toggleData();
+//        if(*grid180Detect)
+//            for(outData &data : outputDataList) if(data.dataType == GRID_180) data.toggleData();
+//        if(*grid120Detect)
+//            for(outData &data : outputDataList) if(data.dataType == GRID_120) data.toggleData();
         ////////
         if(currentError != NO_ERROR) errorHandler(currentError);
     }
@@ -76,7 +77,7 @@ public:
                 if(currentStatus == DEVICE_STANDBY || currentStatus == DEVICE_BUCKYBRAKE) laser_centering_procedure(value);
                 break;
             case GRID_BUTTON:
-                if(currentStatus == DEVICE_STANDBY && rasterLoaded) raster_unload_procedure();
+                if(currentStatus == DEVICE_STANDBY) raster_unload_procedure();
                 else if(currentStatus == DEVICE_GRID_SUPPLY && !rasterLoaded) raster_load_procedure();
                 break;
             default:
@@ -85,8 +86,7 @@ public:
     }
 
     void raster_load_procedure(){
-        motorController->get_center_position();
-        while (motorController->isMotorMoving());
+        motorController->get_center_position(false);
         if((*grid120Detect && *grid180Detect) || (!*grid120Detect && !*grid180Detect)) currentError = GRID_TYPE_ERROR;
         else{
             rasterLoaded = true;
@@ -102,7 +102,6 @@ public:
         currentStatus = DEVICE_GRID_SUPPLY;
         rasterLoaded = false;
         motorController->get_open_position();
-        while (motorController->isMotorMoving());
         for(outData &data : outputDataList){
             if(data.dataType == GRID_120) data.setValue(LOW);
             if(data.dataType == GRID_180) data.setValue(LOW);
@@ -118,9 +117,12 @@ public:
 
     void init_procedure(){
         currentStatus = DEVICE_INITIAL_MOVEMENT;
-        motorController->get_center_position();
-        while (motorController->isMotorMoving());
-        currentStatus = DEVICE_STANDBY;
+        motorController->get_center_position(true);
+    }
+    void return_to_center(){
+        currentStatus = DEVICE_INITIAL_MOVEMENT;
+        motorController->stopMotor();
+        motorController->get_center_position(!(motorController->getCurrentDirection() == MotorController::DIRECTION::FORWARD));
     }
 
     inline void exposition_procedure(){
@@ -137,7 +139,7 @@ public:
                 if(!*buckyCall) {
                     currentStatus = DEVICE_INITIAL_MOVEMENT;
                     for(auto &data: outputDataList) if(data.dataType == BUCKY_READY) data.setValue(LOW);
-                    init_procedure();
+                    return_to_center();
                 }
               break;
             case DEVICE_SCANING_TOMO_ON:
@@ -152,7 +154,7 @@ public:
                 if(!*buckyCall) {
                     currentStatus = DEVICE_INITIAL_MOVEMENT;
                     for(auto &data: outputDataList) if(data.dataType == BUCKY_READY) data.setValue(LOW);
-                    init_procedure();
+                    return_to_center();
                 }
               break;
             default:

@@ -51,29 +51,35 @@ public:
     }
 
     //TODO вызвать в колбэке таймера импульсов мотора
+    bool noReturn = false;
     void motor_refresh(){
         if(mode == in_ERROR) return;
-        if(currentStep >= criticalNofSteps) changeDirection();
-        if(direction_changed > 1){
-            stopMotor();
-            mode = in_ERROR;
-        }
         if(accelerationMode) reCalcSpeed();
         else currentStep++;
-        regValueCalc(V);
+        if(currentStep >= criticalNofSteps){
+            if(noReturn) stopMotor();
+            else changeDirection();
+        }
+        if(direction_changed > 1){
+            stopMotor();
+//            mode = in_ERROR;
+        }
+        regValueCalc();
     }
 
     void get_open_position(){
         accelerationMode = false;
         V = LOAD_UNLOAD_SPEED;
-        setDirection(BACKWARDS);
+        setDirection(FORWARD);
+        noReturn = true;
         startMotor();
     }
 
-    void get_center_position(){
+    void get_center_position(bool initMove){
         accelerationMode = false;
         V = LOAD_UNLOAD_SPEED;
-        if(!motorMoving) setDirection(FORWARD);
+        if(initMove) setDirection(FORWARD);
+        else setDirection(BACKWARDS);
         startMotor();
     }
 
@@ -84,13 +90,13 @@ public:
         startMotor();
     }
 
-
     inline void stopMotor(){
         if(motorMoving){
             HAL_TIM_PWM_Stop_IT(htim, TIM_CHANNEL_2);
-            enable.setValue(LOW);
+            enable.setValue(HIGH);
             motorMoving = false;
         }
+        noReturn = false;
     }
 
     inline void changeDirection(){
@@ -114,6 +120,10 @@ public:
         return event;
     }
 
+    DIRECTION getCurrentDirection() const {
+        return currentDirection;
+    }
+
 private:
     MOTOR_IOS step = MOTOR_IOS(STEP_PIN, STEP_GPIO_Port, STEP_Pin);
     MOTOR_IOS direction = MOTOR_IOS(DIR_PIN, DIR_GPIO_Port, DIR_Pin);
@@ -124,7 +134,7 @@ private:
     int currentStep = 0;
     int accel_step = 0;
 
-    float A = 1000.0f;				            // step^2 / second
+    float A = 40.0f;				            // step^2 / second
     float V = 0.0f;
     float Vmin = START_SPEED;                   // Minimum speed in steps/second
     float Vmax = CONFIG1_SPEED;                 // Maximum speed in steps/second
@@ -144,17 +154,17 @@ private:
             mode = MODE::ACCEL;
             direction_changed = 0;
             motorMoving = true;
-            enable.setValue(HIGH);
-            regValueCalc(V);
+            enable.setValue(LOW);
+            regValueCalc();
             HAL_TIM_PWM_Start_IT(htim, TIM_CHANNEL_2);
         }
     }
-    inline void regValueCalc(float inputV){
+    inline void regValueCalc(){
         if(V > 0){
-            int buf = (int) (1000000 / V);
-            if(buf < 65535){
+            int buf = (int) (10000000 / V);
+            if(buf > 0 && buf < 65535){
                 __HAL_TIM_SET_AUTORELOAD(htim, buf);
-                htim->Instance->CCR1 = buf/2;
+                __HAL_TIM_SET_COMPARE(htim,TIM_CHANNEL_2,buf/2);
             }
         }
     }
@@ -175,14 +185,14 @@ private:
                 {
                     V = Vmax;
                     event = EVENT_CSS;
-                    break;
-                }
-                if (accel_step >= criticalNofSteps / 2)
+                }else
+                    V += A;
+                if (accel_step >= criticalNofSteps / 3)
                 {
                     mode = MODE::DECCEL;
                     break;
                 }
-                V += A / abs(V);
+//                V += A / abs(V);
                 accel_step++;
             }
             break;
@@ -200,14 +210,17 @@ private:
             {
                 if (accel_step <= 0)
                 {
-                    stopMotor();
-                    mode = MODE::IDLE;
-                    event = EVENT_STOP;
+//                    stopMotor();
+//                    mode = MODE::IDLE;
+//                    event = EVENT_STOP;
+                    changeDirection();
                     break;
+                }else{
+//                    V -= A/abs(V);
+                    V -= A;
+                    if (V < Vmin) V = Vmin;
+                    accel_step--;
                 }
-                V -= A/abs(V);
-                if (V < Vmin) V = Vmin;
-                accel_step--;
             }
             break;
 
